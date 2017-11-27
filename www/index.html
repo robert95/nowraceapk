@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2012-2016 Adobe Systems Incorporated. All rights reserved.
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+    <!-- This is a wide open CSP declaration. To lock this down for production, see below. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *" />
+    <!-- Good default declaration:
+    * gap: is required only on iOS (when using UIWebView) and is needed for JS->native communication
+    * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
+    * Disables use of eval() and inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
+        * Enable inline JS: add 'unsafe-inline' to default-src
+        * Enable eval(): add 'unsafe-eval' to default-src
+    * Create your own at http://cspisawesome.com
+    -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: 'unsafe-inline' https://ssl.gstatic.com; style-src 'self' 'unsafe-inline'; media-src *" /> -->
+
+    <link rel="stylesheet" type="text/css" href="css/index.css" />
+    <title>NowRace.pl</title>
+</head>
+
+<<body class="login-body">
+    <div class="login-page js-login-page">
+        <div class="form">
+            <h3>Logowanie</h3>
+			<div class="form-group  "><label class="control-label required" for="login__username">Adres email</label><input id="login__username" name="_username" required="required" autocomplete="off" class="form-control" type="email" value=""></div>
+			<div class="form-group  "><label class="control-label required" for="login__password">Hasło</label><input id="login__password" name="_password" required="required" autocomplete="off" class="form-control" type="password"></div>
+			<button type="submit" id="login-btn">Zaloguj się!</button>
+        </div>
+    </div>
+    <div class="login-page race-page">
+        <div class="form">
+			<input type="hidden" id="url" value="http://nowrace.pl">
+			<input type="hidden" id="start-timestamp" value="-1">
+            <h3>
+				<span id="race-name"></span><br>
+				<span id="race-date">13:00 18-01-2017</span>
+				<span class="start-info before-start">Wciśnij START gdy będziesz gotowy, po starcie wyścigu Twoje współrzędne zostaną automatycznie wysyłane!</span>
+			</h3>
+			<div class="waiting-for-start">
+				 <div class="loader"></div> 
+			</div>
+			<div class="cords-is-sending after-start">
+				 <p>
+					Działam poprawnie!<br><span>Możesz biec spokojnie, powodzenia!</span>
+				 </p>
+			</div>
+			<div>
+				<button type="submit" id="start-btn">START!</button>
+				<button type="submit" id="stop-btn">STOP!</button>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script type="text/javascript">
+        app.initialize();
+    </script>
+	<script>
+		var isStarting = false;
+		var waitingInterval;
+		var sendingInterval;
+		
+		$(document).ready(function() {
+			$('#login-btn').click(function(){
+				var login = $("#login__username").val();
+				var pass = $("#login__password").val();
+				console.log("loguje się przez dane: " + login + " - " + pass);
+				return $.ajax({
+					type: "GET",
+					url: 'http://aafbba7b.ngrok.io/app-login?l='+login+'&p='+pass,
+				}).done(function (data) {
+					console.log(data);
+					if(typeof data.error != 'undefined'){
+						alert(data.error);
+					}else{
+						goodLogin(data);
+					}
+				}).fail(function (a, b, c) {
+					console.log(b + '|' + c);
+				});
+			});
+			
+			$("#start-btn").click(function (){
+				$(".before-start").hide();
+				$(".waiting-for-start").show();
+				waitingInterval = setInterval(function(){
+					if(isStarting == false){
+						console.log(Date.now());
+						console.log($("#start-timestamp").val() * 1000);
+						if($("#start-timestamp").val() * 1000 < Date.now()){
+							isStarting = true;
+							afterStart();
+						}
+					}
+				}, 500);
+				$("#start-btn").hide();
+			});
+			
+			$("#stop-btn").click(function (){
+				isStarting = false;
+				clearInterval(waitingInterval);
+				clearInterval(sendingInterval);
+				
+				$("#start-btn").show();
+				$(".before-start").show();
+
+				$(".cords-is-sending").hide();
+				$(".waiting-for-start").hide();
+				$("#stop-btn").hide();
+			});
+		} );
+		
+		function goodLogin(data){
+			console.log(data.url);
+			console.log(data.timestamp);
+			$("#race-name").text(data.name);
+			$("#race-date").text(data.date);
+			$("#url").val(data.url);
+			//$("#start-timestamp").val(Math.floor(Date.now() / 1000) + 5);
+			$("#start-timestamp").val(data.timestamp);
+			$(".js-login-page").hide();
+			$(".race-page").slideDown();
+		}
+		
+		function wrongLogin(){
+			alert("Niepoprawne dane! Spróbuj jeszcze raz!");
+		}
+		
+		function afterStart(){
+			$("#stop-btn").show();
+			$(".waiting-for-start").hide();
+			$(".after-start").show();
+			sendingInterval = setInterval(function(){ if(isStarting){ getAndSendCords();} }, 1000);
+		}
+		
+		function getAndSendCords(){
+			navigator.geolocation.getCurrentPosition(onSuccessGetLocation, onErrorGetLocation);
+		}
+		
+		function onSuccessGetLocation(position) {
+			var lat = position.coords.latitude;
+			var lng = position.coords.longitude;
+			//var url = $("#url").val() + "?lat=" + lat + "&lng=" + lng;
+			var url = 'http://aafbba7b.ngrok.io/race/set-cords/qAPdbZlyXjzpXoe' + "?lat=" + lat + "&lng=" + lng;
+			console.log("Wysyłam GET na url: " + url);
+			$.ajax({
+				type: "GET",
+				url: url,
+			}).done(function (data) {
+				console.log(data);
+			}).fail(function (a, b, c) {
+				console.log(b + '|' + c);
+			});
+		}
+
+		function onErrorGetLocation(error) {
+			alert("Musisz wyrazić zgodę, abyśmy mogli Cię lokalizować");
+		}
+		
+	</script>
+</body>
+
+</html>

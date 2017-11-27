@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Witamy w NowRace.pl!</title>
+	<link rel="stylesheet" href="global.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="login-body">
+    <div class="login-page js-login-page">
+        <div class="form">
+            <h3>Logowanie</h3>
+			<div class="form-group  "><label class="control-label required" for="login__username">Adres email</label><input id="login__username" name="_username" required="required" autocomplete="off" class="form-control" type="email" value=""></div>
+			<div class="form-group  "><label class="control-label required" for="login__password">Hasło</label><input id="login__password" name="_password" required="required" autocomplete="off" class="form-control" type="password"></div>
+			<button type="submit" id="login-btn">Zaloguj się!</button>
+        </div>
+    </div>
+    <div class="login-page race-page">
+        <div class="form">
+			<input type="hidden" id="url" value="http://nowrace.pl">
+			<input type="hidden" id="start-timestamp" value="-1">
+            <h3>
+				<span id="race-name"></span><br>
+				<span id="race-date">13:00 18-01-2017</span>
+				<span class="start-info before-start">Wciśnij START gdy będziesz gotowy, po starcie wyścigu Twoje współrzędne zostaną automatycznie wysyłane!</span>
+			</h3>
+			<div class="waiting-for-start">
+				 <div class="loader"></div> 
+			</div>
+			<div class="cords-is-sending after-start">
+				 <p>
+					Działam poprawnie!<br><span>Możesz biec spokojnie, powodzenia!</span>
+				 </p>
+			</div>
+			<div>
+				<button type="submit" id="start-btn">START!</button>
+				<button type="submit" id="stop-btn">STOP!</button>
+            </div>
+        </div>
+    </div>
+<script src="jquery.min.js"></script>
+<script>
+	var isStarting = false;
+	var waitingInterval;
+	var sendingInterval;
+	
+	$(document).ready(function() {
+		$('#login-btn').click(function(){
+			var login = $("#login__username").val();
+			var pass = $("#login__password").val();
+			console.log("loguje się przez dane: " + login + " - " + pass);
+				//url: 'http://cecd05da.ngrok.io/nowrace/web/app_login?l='+login+'&p='+pass,
+			return $.ajax({
+				type: "GET",
+				url: 'http://aafbba7b.ngrok.io/app-login?l='+login+'&p='+pass,
+			}).done(function (data) {
+				console.log(data);
+				if(typeof data.error != 'undefined'){
+					alert(data.error);
+				}else{
+					goodLogin(data);
+				}
+			}).fail(function (a, b, c) {
+				console.log(b + '|' + c);
+			});
+		});
+		
+		$("#start-btn").click(function (){
+			$(".before-start").hide();
+			$(".waiting-for-start").show();
+			waitingInterval = setInterval(function(){
+				if(isStarting == false){
+					if($("#start-timestamp").val() * 1000 < Date.now()){
+						isStarting = true;
+						afterStart();
+					}
+				}
+			}, 500);
+			$("#start-btn").hide();
+		});
+		
+		$("#stop-btn").click(function (){
+			isStarting = false;
+			clearInterval(waitingInterval);
+			clearInterval(sendingInterval);
+			
+			$("#start-btn").show();
+			$(".before-start").show();
+
+			$(".cords-is-sending").hide();
+			$(".waiting-for-start").hide();
+			$("#stop-btn").hide();
+		});
+	} );
+	
+	function goodLogin(data){
+		$("#race-name").text(data.name);
+		$("#race-date").text(data.date);
+		$("#url").val(data.url);
+		//$("#start-timestamp").val(Math.floor(Date.now() / 1000) + 5);
+		$("#start-timestamp").val(data.timestamp);
+		$(".js-login-page").hide();
+		$(".race-page").slideDown();
+	}
+	
+	function wrongLogin(){
+		alert("Niepoprawne dane! Spróbuj jeszcze raz!");
+	}
+	
+	function afterStart(){
+		$("#stop-btn").show();
+		$(".waiting-for-start").hide();
+		$(".after-start").show();
+		sendingInterval = setInterval(function(){ if(isStarting){ getAndSendCords();} }, 1000);
+	}
+	
+	function getAndSendCords(){
+		var lat = 12;
+		var lng = 21;
+		var url = $("#url").val() + "?lat=" + lat + "&lng=" + lng;
+		console.log("Wysyłam GET na url: " + url);
+	}
+</script>
+</body>
+</html>
+
