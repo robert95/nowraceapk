@@ -92,7 +92,7 @@
 				console.log("loguje się przez dane: " + login + " - " + pass);
 				return $.ajax({
 					type: "GET",
-					url: 'http://aafbba7b.ngrok.io/app-login?l='+login+'&p='+pass,
+					url: 'http://nowrace.xyz/app-login?l='+login+'&p='+pass,
 				}).done(function (data) {
 					console.log(data);
 					if(typeof data.error != 'undefined'){
@@ -165,8 +165,8 @@
 		function onSuccessGetLocation(position) {
 			var lat = position.coords.latitude;
 			var lng = position.coords.longitude;
-			//var url = $("#url").val() + "?lat=" + lat + "&lng=" + lng;
-			var url = 'http://aafbba7b.ngrok.io/race/set-cords/qAPdbZlyXjzpXoe' + "?lat=" + lat + "&lng=" + lng;
+			var url = $("#url").val() + "?lat=" + lat + "&lng=" + lng;
+			//var url = 'http://aafbba7b.ngrok.io/race/set-cords/qAPdbZlyXjzpXoe' + "?lat=" + lat + "&lng=" + lng;
 			console.log("Wysyłam GET na url: " + url);
 			$.ajax({
 				type: "GET",
